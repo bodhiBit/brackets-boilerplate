@@ -1,0 +1,13 @@
+{
+  "name": "bodhiBit.brackets-boilerplate",
+  "title": "Brackets Boilerplate",
+  "description": "Quickly copy boilerplate files into your project in Brackets with this extention.",
+  "homepage": "https://github.com/bodhiBit/brackets-boilerplate",
+  "version": "0.1",
+  "author": "bodhiBit (https://github.com/bodhiBit)",
+  "license": "MIT",
+  "engines": {
+    "brackets": ">=0.24.0"
+  },
+  "categories": [  "codegen", "general"  ]
+}
