@@ -54,6 +54,7 @@ define(function (require, exports, module) {
   function onSelect(button, item, index) {
     var source, dest, q, name, suffix;
 
+    makeList();
     // find and set destination folder
     if (ProjectManager.getSelectedItem()) {
       if (ProjectManager.getSelectedItem().isDirectory) {
