@@ -1,29 +1,69 @@
+/*jshint browser:true */
+/*global define, brackets */
+
 /**
  * Brackets Boilerplate
  */
 define(function (require, exports, module) {
   "use strict";
-  var CommandManager = brackets.getModule("command/CommandManager"),
-      Menus          = brackets.getModule("command/Menus"),
-      ProjectManager = brackets.getModule("project/ProjectManager");
+  var PreferencesManager  = brackets.getModule("preferences/PreferencesManager"),
+      // CommandManager      = brackets.getModule("command/CommandManager"),
+      // Menus               = brackets.getModule("command/Menus"),
+      ProjectManager      = brackets.getModule("project/ProjectManager"),
+      DropdownButton      = brackets.getModule("widgets/DropdownButton").DropdownButton,
+      FileSystem          = brackets.getModule("filesystem/FileSystem"),
 
+      prefs           = PreferencesManager.getExtensionPrefs("bodhiBit.bracketsBoilerplate"),
+      boilerDropdown,
+      boilerplateDir  = null;
 
-  // Function to run when the menu item is clicked
-  function doWhatsThis() {
-    window.alert("you just clicked on " + ProjectManager.getSelectedItem().fullPath);
+  function init() {
+    prefs.definePreference("boilerplateDir", "string");
+    prefs.on("change", function(){
+      if (boilerplateDir !== prefs.get("boilerplateDir")) {
+        boilerplateDir = prefs.get("boilerplateDir");
+        makeList();
+      }
+    });
+
+    boilerDropdown = new DropdownButton("New...", ["Set boilerplate folder..."]);
+    boilerDropdown.$button.appendTo("#project-files-header");
+    $("#project-files-header").css("white-space", "normal");
+    $(boilerDropdown).on("select", onSelect);
   }
 
+  function makeList() {
+    var list = [], dir, i, name;
+    if (boilerplateDir) {
+      // TODO actually make the list...
+      dir = FileSystem.getDirectoryForPath(boilerplateDir);
+      dir.getContents(function(err, entries){
+        for(i=0;i<entries.length;i++) {
+          name = entries[i].fullPath;
+          name = name.substr(name.lastIndexOf("/", name.length-2)+1);
+          list.push(name);
+        }
+        list.push("Set boilerplate folder...");
+      });
+    } else {
+      list.push("Set boilerplate folder...");
+    }
+    boilerDropdown.items = list;
+  }
 
-  // First, register a command - a UI-less object associating an id to a handler
-  var MY_COMMAND_ID = "bodhiBit.bracketsBoilerplate.whatsThis";   // package-style naming to avoid collisions
-  CommandManager.register("What's this?", MY_COMMAND_ID, doWhatsThis);
+  function onSelect(button, item, index) {
+    if (item.substr(-3) === "...") {
+      // Select source folder
+      FileSystem.showOpenDialog(false, true, "Chose boilerplate folder", boilerplateDir, null, function(err, entries){
+        if (entries.length > 0) {
+          prefs.set("boilerplateDir", entries[0]);
+          prefs.save();
+        }
+      });
+    } else {
+      // Copy boilerplate
+    }
+  }
 
-  // Then create a menu item bound to the command
-  // The label of the menu item is the name we gave the command (see above)
-  var menu = Menus.getContextMenu(Menus.ContextMenuIds.PROJECT_MENU);
-  menu.addMenuItem(MY_COMMAND_ID);
-
-  // We could also add a key binding at the same time:
-  //menu.addMenuItem(MY_COMMAND_ID, "Ctrl-Alt-H");
-  // (Note: "Ctrl" is automatically mapped to "Cmd" on Mac)
+  init();
 });
