@@ -88,8 +88,7 @@ define(function (require, exports, module) {
             false,
             false
           ).done(q.shift());
-        },
-        function(entry) {
+        }, function(entry) {
           // remember destination File
           dest = entry;
           // Extract the basename for destination
@@ -109,29 +108,32 @@ define(function (require, exports, module) {
             suffix = "";
             q.shift()();
           }
-        },
-        function() {
-          // Give time for the editor to open the file
+        }, function (err) {
+          // give editor time to open the file
           setTimeout(q.shift(), 1000);
-        },
-        function () {
-          // read boilerplate File
-          source.read({}, q.shift());
-        },
-        function(err, data) {
-          // substitute <<<NAME>>> with `name`
-          while (data.indexOf("<<<NAME>>>") > -1) {
-            data = data.replace("<<<NAME>>>", name);
-          }
-          // Write boilerplate to destination
-          dest.write(data, {}, q.shift());
-        },
-        function (err, stat) {
+        }, function(err, data) {
+          // Copy boilerplate file to destination
+          copyFile(source, dest, name, q.shift());
+        }, function (err, stat) {
           ProjectManager.refreshFileTree();
         }
       ];
       q.shift()();
     }
+  }
+
+  function copyFile(source, dest, name, cb) {
+    source.read({}, function(err, data){
+      if (data.indexOf("<<<NAME>>>") > -1) {
+        // substitute <<<NAME>>> with `name`
+        data = data.replace(/<<<NAME>>>/g, name);
+        // Write boilerplate to destination
+        dest.write(data, {}, cb);
+      } else {
+        // Copy boilerplate file to destination
+        brackets.fs.copyFile(source.fullPath, dest.fullPath, cb);
+      }
+    });
   }
 
   init();
