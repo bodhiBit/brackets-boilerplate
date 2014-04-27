@@ -73,27 +73,29 @@ define(function (require, exports, module) {
           prefs.save();
         }
       });
-    } else if (item.substr(-1) === "/") {
-      // Copy folder
-      window.alert("don't know how to copy folders yet! :(");
     } else {
-      // Copy file
-      source  = FileSystem.getFileForPath(boilerplateDir + item);
+      // Get source
+      if (item.substr(-1) === "/") {
+        source  = FileSystem.getDirectoryForPath(boilerplateDir + item);
+      } else {
+        source  = FileSystem.getFileForPath(boilerplateDir + item);
+      }
       q = [
         function() {
-          // Create new file in project tree and let user rename it
+          // Create new entry in project tree and let user rename it
           ProjectManager.createNewItem(
             FileSystem.getDirectoryForPath(dest),
             "new_" + item,
             false,
-            false
+            source.isDirectory
           ).done(q.shift());
         }, function(entry) {
-          // remember destination File
+          // remember destination
           dest = entry;
           // Extract the basename for destination
           name = dest.fullPath;
           name = name.substr(name.lastIndexOf("/", name.length-2)+1);
+          name = name.replace("/", "");
           if (name.indexOf(".") < 0 && item.indexOf(".") > -1) {
             // Make sure destination has the proper suffix
             suffix = item.substr(item.indexOf("."));
@@ -112,8 +114,8 @@ define(function (require, exports, module) {
           // give editor time to open the file
           setTimeout(q.shift(), 1000);
         }, function(err, data) {
-          // Copy boilerplate file to destination
-          copyFile(source, dest, name, q.shift());
+          // Copy boilerplate to destination
+          copy(source, dest, name, q.shift());
         }, function (err, stat) {
           ProjectManager.refreshFileTree();
         }
@@ -122,8 +124,48 @@ define(function (require, exports, module) {
     }
   }
 
+  function copy(source, dest, name, cb) {
+    cb = cb || function(){};
+    if (source.isDirectory && dest.isDirectory) {
+      return copyFolder(source, dest, name, cb);
+    } else
+    if (source.isFile && dest.isFile) {
+      return copyFile(source, dest, name, cb);
+    } else {
+      cb(true);
+    }
+  }
+
+  function copyFolder(source, dest, name, cb) {
+    cb = cb || function(){};
+    dest.create(function(err) {
+      source.getContents(function(err, entries) {
+        var i, basename,
+            entriesLeft = entries.length,
+            _cb = function(err, stat) {
+              entriesLeft--;
+              if (entriesLeft <= 0) {
+                cb();
+              }
+            };
+        if (entriesLeft <= 0) {
+          cb();
+        }
+        for(i=0;i<entries.length;i++) {
+          basename = entries[i].fullPath;
+          basename = basename.substr(basename.lastIndexOf("/", basename.length-2)+1);
+          if (entries[i].isDirectory) {
+            copyFolder(entries[i], FileSystem.getDirectoryForPath(dest.fullPath + basename), name, _cb);
+          } else {
+            copyFile(entries[i], FileSystem.getFileForPath(dest.fullPath + basename), name, _cb);
+          }
+        }
+      });
+    });
+  }
+
   function copyFile(source, dest, name, cb) {
-    source.read({}, function(err, data){
+    source.read({}, function(err, data) {
       if (data.indexOf("<<<NAME>>>") > -1) {
         // substitute <<<NAME>>> with `name`
         data = data.replace(/<<<NAME>>>/g, name);
