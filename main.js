@@ -84,7 +84,7 @@ define(function (require, exports, module) {
           // Create new entry in project tree and let user rename it
           ProjectManager.createNewItem(
             FileSystem.getDirectoryForPath(dest),
-            "new_" + item,
+            item,
             false,
             source.isDirectory
           ).done(q.shift());
