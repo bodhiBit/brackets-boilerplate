@@ -27,7 +27,7 @@ define(function (require, exports, module) {
     });
 
     boilerDropdown = new DropdownButton("New...", ["Set boilerplate folder..."]);
-    boilerDropdown.$button.appendTo("#project-files-header");
+    boilerDropdown.$button.click(makeList).appendTo("#project-files-header");
     $("#project-files-header").css("white-space", "normal");
     $(boilerDropdown).on("select", onSelect);
   }
@@ -35,7 +35,6 @@ define(function (require, exports, module) {
   function makeList() {
     var list = [], dir, i, name;
     if (boilerplateDir) {
-      // TODO actually make the list...
       dir = FileSystem.getDirectoryForPath(boilerplateDir);
       dir.getContents(function(err, entries){
         for(i=0;i<entries.length;i++) {
@@ -54,7 +53,6 @@ define(function (require, exports, module) {
   function onSelect(button, item, index) {
     var source, dest, q, name, suffix;
 
-    makeList();
     // find and set destination folder
     if (ProjectManager.getSelectedItem()) {
       if (ProjectManager.getSelectedItem().isDirectory) {
