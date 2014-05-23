@@ -7,14 +7,15 @@
 define(function (require, exports, module) {
   "use strict";
   var PreferencesManager  = brackets.getModule("preferences/PreferencesManager"),
-      // CommandManager      = brackets.getModule("command/CommandManager"),
-      // Menus               = brackets.getModule("command/Menus"),
+      CommandManager      = brackets.getModule("command/CommandManager"),
+      Menus               = brackets.getModule("command/Menus"),
       ProjectManager      = brackets.getModule("project/ProjectManager"),
       DropdownButton      = brackets.getModule("widgets/DropdownButton").DropdownButton,
       FileSystem          = brackets.getModule("filesystem/FileSystem"),
 
       prefs           = PreferencesManager.getExtensionPrefs("brackets-boilerplate"),
       boilerDropdown,
+      boilerMenu,
       boilerplateDir  = null;
 
   function init() {
@@ -25,32 +26,55 @@ define(function (require, exports, module) {
         makeList();
       }
     });
-
-    boilerDropdown = new DropdownButton("New...", ["Set boilerplate folder..."]);
-    boilerDropdown.$button.click(makeList).appendTo("#project-files-header");
-    $("#project-files-header").css("white-space", "normal");
-    $(boilerDropdown).on("select", onSelect);
+    CommandManager.register("Refresh list", "brackets-boilerplate-refresh", makeList);
+    CommandManager.register("Set boilerplate folder...", "brackets-boilerplate-source", selectSourceFolder);
+    makeList();
+  }
+  
+  function createItemHandler(item) {
+    return function(){
+      onSelect(item);
+    };
   }
 
   function makeList() {
-    var list = [], dir, i, name;
+    var dir, i, name;
+    
+    Menus.removeMenu("brackets-boilerplate-menu");
+    boilerMenu = Menus.addMenu("Boilerplate", "brackets-boilerplate-menu", Menus.AFTER, Menus.AppMenuBar.FILE_MENU);
+    
     if (boilerplateDir) {
       dir = FileSystem.getDirectoryForPath(boilerplateDir);
       dir.getContents(function(err, entries){
         for(i=0;i<entries.length;i++) {
           name = entries[i].fullPath;
           name = name.substr(name.lastIndexOf("/", name.length-2)+1);
-          list.push(name);
+          
+          CommandManager.register(name, "brackets-boilerplate-item-"+name, createItemHandler(name));
+          boilerMenu.addMenuItem("brackets-boilerplate-item-"+name);
         }
-        list.push("Set boilerplate folder...");
+        boilerMenu.addMenuDivider();
+        boilerMenu.addMenuItem("brackets-boilerplate-refresh");
+        boilerMenu.addMenuItem("brackets-boilerplate-source");
       });
     } else {
-      list.push("Set boilerplate folder...");
+      boilerMenu.addMenuItem("brackets-boilerplate-source");
     }
-    boilerDropdown.items = list;
   }
-
-  function onSelect(button, item, index) {
+  
+  function selectSourceFolder() {
+    var source;
+    // Select source folder
+    FileSystem.showOpenDialog(false, true, "Chose boilerplate folder", boilerplateDir, null, function(err, entries){
+      if (entries.length > 0) {
+        source = FileSystem.getDirectoryForPath(entries[0]);
+        prefs.set("boilerplateDir", source.fullPath);
+        prefs.save();
+      }
+    });
+  }
+  
+  function onSelect(item) {
     var source, dest, q, name, suffix;
 
     // find and set destination folder
@@ -63,64 +87,53 @@ define(function (require, exports, module) {
     } else {
       dest = ProjectManager.getProjectRoot().fullPath;
     }
-    if (item.substr(-3) === "...") {
-      // Select source folder
-      FileSystem.showOpenDialog(false, true, "Chose boilerplate folder", boilerplateDir, null, function(err, entries){
-        if (entries.length > 0) {
-          source = FileSystem.getDirectoryForPath(entries[0]);
-          prefs.set("boilerplateDir", source.fullPath);
-          prefs.save();
-        }
-      });
+    // Get source
+    if (item.substr(-1) === "/") {
+      source  = FileSystem.getDirectoryForPath(boilerplateDir + item);
     } else {
-      // Get source
-      if (item.substr(-1) === "/") {
-        source  = FileSystem.getDirectoryForPath(boilerplateDir + item);
-      } else {
-        source  = FileSystem.getFileForPath(boilerplateDir + item);
-      }
-      q = [
-        function() {
-          // Create new entry in project tree and let user rename it
-          ProjectManager.createNewItem(
-            FileSystem.getDirectoryForPath(dest),
-            item,
-            false,
-            source.isDirectory
-          ).done(q.shift());
-        }, function(entry) {
-          // remember destination
-          dest = entry;
-          // Extract the basename for destination
-          name = dest.fullPath;
-          name = name.substr(name.lastIndexOf("/", name.length-2)+1);
-          name = name.replace("/", "");
-          if (name.indexOf(".") < 0 && item.indexOf(".") > -1) {
-            // Make sure destination has the proper suffix
-            suffix = item.substr(item.indexOf("."));
-            dest.rename(dest.fullPath + suffix, q.shift());
-          } else if (name.indexOf(".") > -1) {
-            // Extract new suffix
-            suffix  = name.substr(name.indexOf("."));
-            name    = name.substr(0, name.indexOf("."));
-            q.shift()();
-          } else {
-            // No suffix
-            suffix = "";
-            q.shift()();
-          }
-        }, function (err) {
-          // give editor time to open the file
-          setTimeout(q.shift(), 1000);
-        }, function(err, data) {
-          // Copy boilerplate to destination
-          copy(source, dest, name, q.shift());
-        }, function (err, stat) {
-          ProjectManager.refreshFileTree();
-        }
-      ];
-      q.shift()();
+      source  = FileSystem.getFileForPath(boilerplateDir + item);
     }
+    q = [
+      function() {
+        // Create new entry in project tree and let user rename it
+        ProjectManager.createNewItem(
+          FileSystem.getDirectoryForPath(dest),
+          item,
+          false,
+          source.isDirectory
+        ).done(q.shift());
+      }, function(entry) {
+        // remember destination
+        dest = entry;
+        // Extract the basename for destination
+        name = dest.fullPath;
+        name = name.substr(name.lastIndexOf("/", name.length-2)+1);
+        name = name.replace("/", "");
+        if (name.indexOf(".") < 0 && item.indexOf(".") > -1) {
+          // Make sure destination has the proper suffix
+          suffix = item.substr(item.indexOf("."));
+          dest.rename(dest.fullPath + suffix, q.shift());
+        } else if (name.indexOf(".") > -1) {
+          // Extract new suffix
+          suffix  = name.substr(name.indexOf("."));
+          name    = name.substr(0, name.indexOf("."));
+          q.shift()();
+        } else {
+          // No suffix
+          suffix = "";
+          q.shift()();
+        }
+      }, function (err) {
+        // give editor time to open the file
+        setTimeout(q.shift(), 1000);
+      }, function(err, data) {
+        // Copy boilerplate to destination
+        copy(source, dest, name, q.shift());
+      }, function (err, stat) {
+        ProjectManager.refreshFileTree();
+      }
+    ];
+    q.shift()();
   }
 
   function copy(source, dest, name, cb) {
