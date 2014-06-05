@@ -50,8 +50,10 @@ define(function (require, exports, module) {
           name = entries[i].fullPath;
           name = name.substr(name.lastIndexOf("/", name.length-2)+1);
           
-          CommandManager.register(name, "brackets-boilerplate-item-"+name, createItemHandler(name));
-          boilerMenu.addMenuItem("brackets-boilerplate-item-"+name);
+          if (name.substr(0, 1) !== ".") {
+            CommandManager.register(name, "brackets-boilerplate-item-"+name, createItemHandler(name));
+            boilerMenu.addMenuItem("brackets-boilerplate-item-"+name);
+          }
         }
         boilerMenu.addMenuDivider();
         boilerMenu.addMenuItem("brackets-boilerplate-refresh");
