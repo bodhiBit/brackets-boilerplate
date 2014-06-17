@@ -183,7 +183,7 @@ define(function (require, exports, module) {
 
   function copyFile(source, dest, name, cb) {
     source.read({}, function(err, data) {
-      if (data.indexOf("<<<NAME>>>") > -1) {
+      if (data && data.indexOf("<<<NAME>>>") > -1) {
         // substitute <<<NAME>>> with `name`
         data = data.replace(/<<<NAME>>>/g, name);
         // Write boilerplate to destination
