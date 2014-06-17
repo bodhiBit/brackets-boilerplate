@@ -10,7 +10,6 @@ define(function (require, exports, module) {
       CommandManager      = brackets.getModule("command/CommandManager"),
       Menus               = brackets.getModule("command/Menus"),
       ProjectManager      = brackets.getModule("project/ProjectManager"),
-      DropdownButton      = brackets.getModule("widgets/DropdownButton").DropdownButton,
       FileSystem          = brackets.getModule("filesystem/FileSystem"),
 
       prefs           = PreferencesManager.getExtensionPrefs("brackets-boilerplate"),
