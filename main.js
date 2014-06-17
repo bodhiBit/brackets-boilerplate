@@ -13,11 +13,19 @@ define(function (require, exports, module) {
       FileSystem          = brackets.getModule("filesystem/FileSystem"),
 
       prefs           = PreferencesManager.getExtensionPrefs("brackets-boilerplate"),
-      boilerDropdown,
       boilerMenu,
-      boilerplateDir  = null;
+      boilerplateDir  = null,
+      firstItemId     = 0,
+      nextItemId      = 0;
 
   function init() {
+    boilerMenu = Menus.addMenu("Boilerplate", "boilerplate-menu", Menus.AFTER, Menus.AppMenuBar.FILE_MENU);
+    CommandManager.register("Refresh list", "boilerplate-refresh", makeList);
+    boilerMenu.addMenuItem("boilerplate-refresh");
+    CommandManager.register("Set boilerplate folder...", "boilerplate-source", selectSourceFolder);
+    boilerMenu.addMenuItem("boilerplate-source");
+    boilerMenu.addMenuDivider();
+    
     prefs.definePreference("boilerplateDir", "string");
     prefs.on("change", function(){
       if (boilerplateDir !== prefs.get("boilerplateDir")) {
@@ -25,9 +33,6 @@ define(function (require, exports, module) {
         makeList();
       }
     });
-    CommandManager.register("Refresh list", "boilerplate-refresh", makeList);
-    CommandManager.register("Set boilerplate folder...", "boilerplate-source", selectSourceFolder);
-    makeList();
   }
   
   function createItemHandler(item) {
@@ -37,29 +42,28 @@ define(function (require, exports, module) {
   }
 
   function makeList() {
-    var dir, i, name;
+    var dir, i, name, itemId;
     
-    Menus.removeMenu("boilerplate-menu");
-    boilerMenu = Menus.addMenu("Boilerplate", "boilerplate-menu", Menus.AFTER, Menus.AppMenuBar.FILE_MENU);
+    // Empty list
+    for(firstItemId;firstItemId<nextItemId;firstItemId++) {
+      boilerMenu.removeMenuItem("boilerplate-item-"+firstItemId);
+    }
     
     if (boilerplateDir) {
+      // Generate list
       dir = FileSystem.getDirectoryForPath(boilerplateDir);
       dir.getContents(function(err, entries){
         for(i=0;i<entries.length;i++) {
           name = entries[i].fullPath;
           name = name.substr(name.lastIndexOf("/", name.length-2)+1);
+          itemId = nextItemId++;
           
           if (name.substr(0, 1) !== ".") {
-            CommandManager.register(name, "boilerplate-item-"+i, createItemHandler(name));
-            boilerMenu.addMenuItem("boilerplate-item-"+i);
+            CommandManager.register(name, "boilerplate-item-"+itemId, createItemHandler(name));
+            boilerMenu.addMenuItem("boilerplate-item-"+itemId);
           }
         }
-        boilerMenu.addMenuDivider();
-        boilerMenu.addMenuItem("boilerplate-refresh");
-        boilerMenu.addMenuItem("boilerplate-source");
       });
-    } else {
-      boilerMenu.addMenuItem("boilerplate-source");
     }
   }
   
