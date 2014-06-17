@@ -25,8 +25,8 @@ define(function (require, exports, module) {
         makeList();
       }
     });
-    CommandManager.register("Refresh list", "brackets-boilerplate-refresh", makeList);
-    CommandManager.register("Set boilerplate folder...", "brackets-boilerplate-source", selectSourceFolder);
+    CommandManager.register("Refresh list", "boilerplate-refresh", makeList);
+    CommandManager.register("Set boilerplate folder...", "boilerplate-source", selectSourceFolder);
     makeList();
   }
   
@@ -39,8 +39,8 @@ define(function (require, exports, module) {
   function makeList() {
     var dir, i, name;
     
-    Menus.removeMenu("brackets-boilerplate-menu");
-    boilerMenu = Menus.addMenu("Boilerplate", "brackets-boilerplate-menu", Menus.AFTER, Menus.AppMenuBar.FILE_MENU);
+    Menus.removeMenu("boilerplate-menu");
+    boilerMenu = Menus.addMenu("Boilerplate", "boilerplate-menu", Menus.AFTER, Menus.AppMenuBar.FILE_MENU);
     
     if (boilerplateDir) {
       dir = FileSystem.getDirectoryForPath(boilerplateDir);
@@ -50,16 +50,16 @@ define(function (require, exports, module) {
           name = name.substr(name.lastIndexOf("/", name.length-2)+1);
           
           if (name.substr(0, 1) !== ".") {
-            CommandManager.register(name, "brackets-boilerplate-item-"+name, createItemHandler(name));
-            boilerMenu.addMenuItem("brackets-boilerplate-item-"+name);
+            CommandManager.register(name, "boilerplate-item-"+i, createItemHandler(name));
+            boilerMenu.addMenuItem("boilerplate-item-"+i);
           }
         }
         boilerMenu.addMenuDivider();
-        boilerMenu.addMenuItem("brackets-boilerplate-refresh");
-        boilerMenu.addMenuItem("brackets-boilerplate-source");
+        boilerMenu.addMenuItem("boilerplate-refresh");
+        boilerMenu.addMenuItem("boilerplate-source");
       });
     } else {
-      boilerMenu.addMenuItem("brackets-boilerplate-source");
+      boilerMenu.addMenuItem("boilerplate-source");
     }
   }
   
@@ -96,13 +96,17 @@ define(function (require, exports, module) {
     }
     q = [
       function() {
-        // Create new entry in project tree and let user rename it
-        ProjectManager.createNewItem(
-          FileSystem.getDirectoryForPath(dest),
-          item,
-          false,
-          source.isDirectory
-        ).done(q.shift());
+        // Ask user for a new filename
+        name = window.prompt("New filename:", item.replace("/", ""));
+        if (name) {
+          // Create new entry in project tree
+          ProjectManager.createNewItem(
+            FileSystem.getDirectoryForPath(dest),
+            name,
+            true, // (Apperantly the Linux port of Brackets doesn't rename when setting `skipRename` to `false`)
+            source.isDirectory
+          ).done(q.shift());
+        }
       }, function(entry) {
         // remember destination
         dest = entry;
