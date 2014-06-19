@@ -100,17 +100,13 @@ define(function (require, exports, module) {
     }
     q = [
       function() {
-        // Ask user for a new filename
-        name = window.prompt("New filename:", item.replace("/", ""));
-        if (name) {
-          // Create new entry in project tree
-          ProjectManager.createNewItem(
-            FileSystem.getDirectoryForPath(dest),
-            name,
-            true, // (Apperantly the Linux port of Brackets doesn't rename when setting `skipRename` to `false`)
-            source.isDirectory
-          ).done(q.shift());
-        }
+        // Create new entry in project tree and ask user to rename it
+        ProjectManager.createNewItem(
+          FileSystem.getDirectoryForPath(dest),
+          item.replace("/", ""),
+          false,
+          source.isDirectory
+        ).done(q.shift());
       }, function(entry) {
         // remember destination
         dest = entry;
@@ -142,7 +138,7 @@ define(function (require, exports, module) {
         ProjectManager.refreshFileTree();
       }
     ];
-    q.shift()();
+    setTimeout(q.shift(), 100);
   }
 
   function copy(source, dest, name, cb) {
